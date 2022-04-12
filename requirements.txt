@@ -15,3 +15,4 @@ PyJWT==1.7.1
 python-decouple==3.3
 pyresparser
 textract
+python-multipart

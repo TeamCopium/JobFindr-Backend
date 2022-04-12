@@ -2,7 +2,7 @@
 #importing module
 ###################################################################################################################################
 
-from fastapi import FastAPI,HTTPException
+from fastapi import FastAPI,HTTPException,File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 # from pymongo import MongoClient
@@ -12,6 +12,8 @@ import jwt
 import datetime
 from pyresparser import ResumeParser
 from decouple import config
+import os
+import shutil
 
 JWT_SECRET = config("secret")
 JWT_ALGORITHM = config("algorithm")
@@ -43,6 +45,7 @@ class User(BaseModel):
     email: str
     password: str
     name: str
+    skills:list
 class NewUser(BaseModel):
     email: str
     password: str
@@ -54,6 +57,12 @@ class Organization(BaseModel):
     name: str
 
 class Job(BaseModel):
+    id: str
+    description: str
+    skills : list
+    organization : str
+    contact_email : str
+class JobNew(BaseModel):
     description: str
     skills : list
     organization : str
@@ -89,6 +98,7 @@ async def create_user(user):
     if user_exists:
         raise HTTPException(status_code=400, detail="User already exists")
     document['password'] = pwd_context.hash(document['password'])
+    document['skills'] = []
     result = await db.users.insert_one(document)
     document['id'] = str(document['_id'])
     del document['_id']
@@ -102,11 +112,19 @@ async def fetch_all_users():
         document['id'] = str(document['_id'])
         users.append(User(**document))
     return users
-
+####################################################################################################################################
+async def add_skills(email, skills):
+    await db.users.update_one({"email": email}, {"$set": {"skills": skills}})
+    document = await db.users.find_one({"email": email})
+    document['id'] = str(document['_id'])
+    del document['_id']
+    return document
 
 ####################################################################################################################################
 async def fetch_one_user(email):
     document = await db.users.find_one({"email": email})
+    document['id'] = str(document['_id'])
+    del document['_id']
     return document
 
 ####################################################################################################################################
@@ -123,6 +141,8 @@ async def remove_user(email):
 ####################################################################################################################################
 async def fetch_one_organization(email):
     document = await db.organizations.find_one({"email": email})
+    document['id'] = str(document['_id'])
+    del document['_id']
     return document
 
 
@@ -147,6 +167,26 @@ async def create_organization(organization):
     del document['_id']
     return document
 
+async def fetch_one_job(id):
+    document = await db.jobs.find_one({"_id": id})
+    document['id'] = str(document['_id'])
+    del document['_id']
+    return document
+#################################################################################################################################
+async def create_job(job):
+    document = job
+    result = await db.jobs.insert_one(document)
+    document['id'] = str(document['_id'])
+    del document['_id']
+    return document
+#################################################################################################################################
+async def fetch_all_jobs():
+    jobs = []
+    cursor = db.jobs.find({})
+    async for document in cursor:
+        document['id'] = str(document['_id'])
+        jobs.append(Job(**document))
+    return jobs
 
 ######################################################################################################################################
 # user routes 
@@ -233,13 +273,27 @@ async def get_organization(email):
         return response
     raise HTTPException(404, f"There is no organization with the email {email}")
 
-#####################################################################################################################################
-# skills extract 
-#####################################################################################################################################
-@app.get("/api/skills")
-async def get_skills():
-    data = ResumeParser('/home/cyrus/Desktop/TeamCopium_JobFindr/app/server/DivyanshuKaushik_Resume.docx').get_extracted_data()
-    print(data['skills'])
-    return True
+#################################################################################################################################
+# job routes 
+#################################################################################################################################
+@app.get('/api/jobs/{email}')
+async def get_jobs(email):
+    response = await fetch_all_jobs()
+    return response
 
-####################################################################################################################################
+
+
+#################################################################################################################################
+# file upload routes
+#################################################################################################################################
+@app.post("/api/uploadResume/{email}")
+async def upload_file(email,file: UploadFile = File(...)):
+  if file.content_type == 'application/pdf' or file.content_type == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+    with open(f'{file.filename}', "wb") as buffer:
+      shutil.copyfileobj(file.file, buffer)
+      data = ResumeParser(file.filename).get_extracted_data()
+      # print(data)
+      await add_skills(email,data['skills'])
+      os.unlink(file.filename)
+    return {"message":"Successfully uploaded file"}
+  return {"message":"File type not supported"}
