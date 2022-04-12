@@ -5,7 +5,7 @@
 from fastapi import FastAPI,HTTPException,File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-# from pymongo import MongoClient
+from bson import ObjectId
 import motor.motor_asyncio
 from passlib.context import CryptContext
 import jwt
@@ -46,6 +46,7 @@ class User(BaseModel):
     password: str
     name: str
     skills:list
+
 class NewUser(BaseModel):
     email: str
     password: str
@@ -58,11 +59,14 @@ class Organization(BaseModel):
 
 class Job(BaseModel):
     id: str
+    title: str
     description: str
     skills : list
     organization : str
     contact_email : str
-class JobNew(BaseModel):
+
+class NewJob(BaseModel):
+    title: str
     description: str
     skills : list
     organization : str
@@ -94,7 +98,7 @@ def index():
 
 async def create_user(user):
     document = user
-    user_exists = await fetch_one_user(document['email'])
+    user_exists = await fetch_one_user(document['email'],post=True)
     if user_exists:
         raise HTTPException(status_code=400, detail="User already exists")
     document['password'] = pwd_context.hash(document['password'])
@@ -121,10 +125,10 @@ async def add_skills(email, skills):
     return document
 
 ####################################################################################################################################
-async def fetch_one_user(email):
+async def fetch_one_user(email,post=False):
     document = await db.users.find_one({"email": email})
-    document['id'] = str(document['_id'])
-    del document['_id']
+    if post==False:
+      document['_id'] = str(document['_id'])
     return document
 
 ####################################################################################################################################
@@ -139,10 +143,10 @@ async def remove_user(email):
     return True
 
 ####################################################################################################################################
-async def fetch_one_organization(email):
+async def fetch_one_organization(email,post=False):
     document = await db.organizations.find_one({"email": email})
-    document['id'] = str(document['_id'])
-    del document['_id']
+    if post==False:
+      document['_id'] = str(document['_id'])
     return document
 
 
@@ -158,7 +162,7 @@ async def fetch_all_organizations():
 #####################################################################################################################################
 async def create_organization(organization):
     document = organization
-    organization_exists = await fetch_one_organization(document['email'])
+    organization_exists = await fetch_one_organization(document['email'],post=True)
     if organization_exists:
         raise HTTPException(status_code=400, detail="Organization already exists")
     document['password'] = pwd_context.hash(document['password'])
@@ -168,7 +172,7 @@ async def create_organization(organization):
     return document
 
 async def fetch_one_job(id):
-    document = await db.jobs.find_one({"_id": id})
+    document = await db.jobs.find_one({"_id": ObjectId(id)})
     document['id'] = str(document['_id'])
     del document['_id']
     return document
@@ -261,7 +265,7 @@ async def login_organization(email,password):
       raise HTTPException(400, "Password is incorrect")
     raise HTTPException(404, f"There is no organization with the email {email}")
 #####################################################################################################################################
-@app.get('/api/organizations/')
+@app.get('/api/organizations')
 async def get_organizations():
     response = await fetch_all_organizations()
     return response
@@ -276,12 +280,27 @@ async def get_organization(email):
 #################################################################################################################################
 # job routes 
 #################################################################################################################################
+@app.post('/api/createJob', response_model=Job)
+async def add_job(job: NewJob):
+    response = await create_job(job.dict())
+    if response:
+        return response
+    raise HTTPException(400, "Something went wrong")
 @app.get('/api/jobs/{email}')
 async def get_jobs(email):
     response = await fetch_all_jobs()
     return response
 
-
+@app.get('/api/jobs')
+async def get_jobs():
+    response = await fetch_all_jobs()
+    return response
+@app.get('/api/job/{id}')
+async def fetch_job(id):
+    response = await fetch_one_job(id)
+    if response:
+        return response
+    raise HTTPException(404, f"There is no job with the id {id}")
 
 #################################################################################################################################
 # file upload routes
