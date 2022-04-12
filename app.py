@@ -22,7 +22,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 app = FastAPI()
 
-origins = ['http://localhost:3000']
+origins = ['http://localhost:3000',"*"]
 
 app.add_middleware(
   CORSMiddleware,
