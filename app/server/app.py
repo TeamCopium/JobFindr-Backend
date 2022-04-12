@@ -31,8 +31,8 @@ app.add_middleware(
 )
 
 # mongo setup 
-# MONGO_URI = "mongodb://localhost:27017"
-client = motor.motor_asyncio.AsyncIOMotorClient('mongodb://localhost:27017/')
+MONGO_URI = "mongodb+srv://User:User@cluster0.xgg1s.mongodb.net/jobfindr?retryWrites=true&w=majority"
+client = motor.motor_asyncio.AsyncIOMotorClient(MONGO_URI)
 db = client.jobfindr
 
 #################################################################################################################################
@@ -205,20 +205,32 @@ async def delete_user(email):
 ######################################################################################################################################
 
 @app.post('/api/register/organization', response_model=Organization)
-def register_organization(organization: Organization):
-    response = create_organization(organization.dict())
+async def register_organization(organization: Organization):
+    response = await create_organization(organization.dict())
     if response:
         return response
     raise HTTPException(400, "Something went wrong")
 @app.post('/api/login/organization', response_model=Organization)
-def login_organization(email,password):
-    response = fetch_one_organization(email)
+async def login_organization(email,password):
+    response = await fetch_one_organization(email)
     if response:
       if pwd_context.verify(password, response['password']):
         response['id'] = str(response['_id'])
         del response['_id']
         return response
       raise HTTPException(400, "Password is incorrect")
+    raise HTTPException(404, f"There is no organization with the email {email}")
+#####################################################################################################################################
+@app.get('/api/organizations/')
+async def get_organizations():
+    response = await fetch_all_organizations()
+    return response
+#####################################################################################################################################
+@app.get('/api/organizations/{email}')
+async def get_organization(email):
+    response = await fetch_one_organization(email)
+    if response:
+        return response
     raise HTTPException(404, f"There is no organization with the email {email}")
 
 #####################################################################################################################################
@@ -229,6 +241,5 @@ async def get_skills():
     data = ResumeParser('/home/cyrus/Desktop/TeamCopium_JobFindr/app/server/DivyanshuKaushik_Resume.docx').get_extracted_data()
     print(data['skills'])
     return True
-
 
 ####################################################################################################################################
