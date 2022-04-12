@@ -1,5 +1,6 @@
 fastapi==0.62.0
 uvicorn==0.17.4
+gunicorn
 docx2txt
 nltk==3.4.5
 spacy==2.3.5
