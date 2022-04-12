@@ -15,8 +15,8 @@ from decouple import config
 import os
 import shutil
 
-JWT_SECRET = config("secret")
-JWT_ALGORITHM = config("algorithm")
+# JWT_SECRET = config("secret")
+# JWT_ALGORITHM = config("algorithm")
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -76,13 +76,13 @@ class NewJob(BaseModel):
 #####################################################################################################################################
 # token generation 
 #####################################################################################################################################
-def signJwt(user):
-    payload = {
-        'id': user['id'],
-        'email': user['email'],
-        'exp': datetime.utcnow() + 600
-    }
-    return jwt.encode(payload, JWT_SECRET, JWT_ALGORITHM)
+# def signJwt(user):
+#     payload = {
+#         'id': user['id'],
+#         'email': user['email'],
+#         'exp': datetime.utcnow() + 600
+#     }
+#     return jwt.encode(payload, JWT_SECRET, JWT_ALGORITHM)
 
 
 #####################################################################################################################################
