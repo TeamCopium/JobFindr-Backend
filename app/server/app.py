@@ -105,8 +105,8 @@ async def delete_user(email):
 import docx2txt
 import nltk
 import requests
- 
-nltk.download('stopwords')
+import docx
+nltk.download('punkt')
  
  
 def extract_text_from_docx(docx_path):
@@ -151,7 +151,9 @@ def extract_skills(input_text):
 
 @app.get("/api/skills")
 async def get_skills():
-    text = extract_text_from_docx(os.path.dirname(os.path.abspath(__file__))+"/resume.docx")
+    text = extract_text_from_docx("/home/cyrus/Desktop/TeamCopium_JobFindr/app/server/DivyanshuKaushik_Resume.docx")
+    print(text)
+    # text = docx.Document("/home/cyrus/Desktop/TeamCopium_JobFindr/app/server/cc.docx")
     skills = extract_skills(text)
  
     print(skills)

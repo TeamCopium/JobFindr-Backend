@@ -1,7 +1,11 @@
 from pydantic import BaseModel
 
+
 class User(BaseModel):
-    name:str
+    id: str
+    email: str
+    password: str
+    name: str
 
 class Todo(BaseModel):
     title: str
