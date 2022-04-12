@@ -127,10 +127,11 @@ async def add_skills(email, skills):
 ####################################################################################################################################
 async def fetch_one_user(email,post=False):
     document = await db.users.find_one({"email": email})
-    if post==False:
-      document['_id'] = str(document['_id'])
-    return document
-
+    if document:
+      if post==False:
+        document['_id'] = str(document['_id'])
+      return document
+    return False
 ####################################################################################################################################
 async def update_user(email, name, password):
     await db.users.update_one({"email": email}, {"$set": {"name": name, "password": password}})
@@ -179,6 +180,10 @@ async def fetch_one_job(id):
 #################################################################################################################################
 async def create_job(job):
     document = job
+    skills = []
+    for skill in document['skills']:
+        skills.append(skill.lower())
+    document['skills'] = skills
     result = await db.jobs.insert_one(document)
     document['id'] = str(document['_id'])
     del document['_id']
@@ -286,10 +291,19 @@ async def add_job(job: NewJob):
     if response:
         return response
     raise HTTPException(400, "Something went wrong")
+
 @app.get('/api/jobs/{email}')
 async def get_jobs(email):
-    response = await fetch_all_jobs()
-    return response
+    user = await fetch_one_user(email)
+    if user:
+        response = await fetch_all_jobs()
+        jobs = []
+        for job in response:
+            common = [value for value in user['skills'] if value in job.skills]
+            if len(common) > 0:
+                jobs.append(job)
+        return jobs
+    raise HTTPException(404, "User Not Found")
 
 @app.get('/api/jobs')
 async def get_jobs():
@@ -311,8 +325,10 @@ async def upload_file(email,file: UploadFile = File(...)):
     with open(f'{file.filename}', "wb") as buffer:
       shutil.copyfileobj(file.file, buffer)
       data = ResumeParser(file.filename).get_extracted_data()
-      # print(data)
-      await add_skills(email,data['skills'])
+      skills = []
+      for skill in data['skills']:
+        skills.append(skill.lower())
+      await add_skills(email,skills)
       os.unlink(file.filename)
     return {"message":"Successfully uploaded file"}
   return {"message":"File type not supported"}
