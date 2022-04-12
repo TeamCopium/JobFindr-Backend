@@ -1,5 +1,8 @@
 fastapi==0.62.0
 uvicorn==0.17.4
+docx2txt==0.6.0
+nltk==3.4.5
+requests
 appdirs==1.4.4
 black==20.8b1
 click==7.1.2
