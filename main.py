@@ -2,7 +2,7 @@
 #importing module
 ###################################################################################################################################
 
-from fastapi import FastAPI,HTTPException,File, UploadFile
+from fastapi import FastAPI,HTTPException,File, UploadFile,Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from bson import ObjectId
@@ -318,8 +318,9 @@ async def fetch_job(id):
 #################################################################################################################################
 # file upload routes
 #################################################################################################################################
-@app.post("/api/uploadResume/{email}")
-async def upload_file(email,file: UploadFile = File(...)):
+@app.post("/api/uploadResume")
+async def upload_file(email: str = Form(...),file: UploadFile = File(...)):
+  print(email)
   if file.content_type == 'application/pdf' or file.content_type == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
     with open(f'{file.filename}', "wb") as buffer:
       shutil.copyfileobj(file.file, buffer)
